@@ -1,0 +1,211 @@
+diff --git a/disasm/disasm.cc b/disasm/disasm.cc
+index a33cb712..5af8f448 100644
+--- a/disasm/disasm.cc
++++ b/disasm/disasm.cc
+@@ -979,8 +979,11 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
+     DEFINE_RTYPE(remw);
+     DEFINE_RTYPE(remuw);
+   }
++  if (isa->extension_enabled(EXT_XNN)) {
++    DEFINE_RTYPE(xnnmul);
++  }
+ 
+-  if (isa->extension_enabled(EXT_ZBA)) { 
++  if (isa->extension_enabled(EXT_ZBA)) {
+     DEFINE_RTYPE(sh1add);
+     DEFINE_RTYPE(sh2add);
+     DEFINE_RTYPE(sh3add);
+@@ -994,7 +997,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
+     }
+   }
+ 
+-  if (isa->extension_enabled(EXT_ZBB)) { 
++  if (isa->extension_enabled(EXT_ZBB)) {
+     DEFINE_RTYPE(ror);
+     DEFINE_RTYPE(rol);
+     DEFINE_ITYPE_SHIFT(rori);
+@@ -1029,7 +1032,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
+     DEFINE_RTYPE(clmulr);
+   }
+ 
+-  if (isa->extension_enabled(EXT_ZBS)) { 
++  if (isa->extension_enabled(EXT_ZBS)) {
+     DEFINE_RTYPE(bclr);
+     DEFINE_RTYPE(binv);
+     DEFINE_RTYPE(bset);
+@@ -1194,7 +1197,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
+     DEFINE_RTYPE(fle_d);
+   }
+ 
+-  if (isa->extension_enabled(EXT_ZFH)) { 
++  if (isa->extension_enabled(EXT_ZFH)) {
+     DEFINE_FRTYPE(fadd_h);
+     DEFINE_FRTYPE(fsub_h);
+     DEFINE_FRTYPE(fmul_h);
+@@ -1865,7 +1868,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
+ #define DISASM_RINSN_AND_ROUND(code) \
+   DEFINE_RTYPE(code); \
+   DEFINE_RTYPE(code##_u); \
+-  
++
+   if (isa->extension_enabled(EXT_ZMMUL)) {
+     DEFINE_RTYPE(mul);
+     DEFINE_RTYPE(mulh);
+diff --git a/disasm/isa_parser.cc b/disasm/isa_parser.cc
+index 3a99d0a3..76173666 100644
+--- a/disasm/isa_parser.cc
++++ b/disasm/isa_parser.cc
+@@ -308,6 +308,8 @@ isa_parser_t::isa_parser_t(const char* str, const char *priv)
+       extension_table[EXT_SSQOSID] = true;
+     } else if (ext_str == "zicfilp") {
+       extension_table[EXT_ZICFILP] = true;
++    } else if (ext_str == "xnn") {
++      extension_table[EXT_XNN] = true;
+     } else if (ext_str[0] == 'x') {
+       extension_table['X'] = true;
+       if (ext_str.size() == 1) {
+diff --git a/riscv/encoding.h b/riscv/encoding.h
+index ff3f7434..99ca413e 100644
+--- a/riscv/encoding.h
++++ b/riscv/encoding.h
+@@ -3135,6 +3135,8 @@
+ #define MASK_ZUNPKD831 0xfff0707f
+ #define MATCH_ZUNPKD832 0xad700077
+ #define MASK_ZUNPKD832 0xfff0707f
++#define MATCH_XNN 0x9800700b
++#define MASK_XNN 0xfe00707f
+ 
+ #define CSR_FFLAGS 0x1
+ #define CSR_FRM 0x2
+@@ -5084,6 +5086,9 @@ DECLARE_INSN(zunpkd820, MATCH_ZUNPKD820, MASK_ZUNPKD820)
+ DECLARE_INSN(zunpkd830, MATCH_ZUNPKD830, MASK_ZUNPKD830)
+ DECLARE_INSN(zunpkd831, MATCH_ZUNPKD831, MASK_ZUNPKD831)
+ DECLARE_INSN(zunpkd832, MATCH_ZUNPKD832, MASK_ZUNPKD832)
++// xnn
++DECLARE_INSN(xnnmul, MATCH_XNN, MASK_XNN)
++
+ #endif
+ #ifdef DECLARE_CSR
+ DECLARE_CSR(fflags, CSR_FFLAGS)
+diff --git a/riscv/insns/xnnmul.h b/riscv/insns/xnnmul.h
+new file mode 100644
+index 00000000..05e511bf
+--- /dev/null
++++ b/riscv/insns/xnnmul.h
+@@ -0,0 +1,3 @@
++require_extension(EXT_XNN);
++require_fp;
++WRITE_FRD_F(f32_nn_mul(FRS1_F, FRS2_F));
+diff --git a/riscv/isa_parser.h b/riscv/isa_parser.h
+index f02b55de..33420542 100644
+--- a/riscv/isa_parser.h
++++ b/riscv/isa_parser.h
+@@ -88,6 +88,7 @@ typedef enum {
+   EXT_ZALASR,
+   EXT_SSQOSID,
+   EXT_ZICFILP,
++  EXT_XNN,
+   NUM_ISA_EXTENSIONS
+ } isa_extension_t;
+ 
+diff --git a/riscv/riscv.mk.in b/riscv/riscv.mk.in
+index 0c4a14b4..94c1d46d 100644
+--- a/riscv/riscv.mk.in
++++ b/riscv/riscv.mk.in
+@@ -134,6 +134,9 @@ riscv_insn_ext_i = \
+ 	fence \
+ 	fence_i \
+ 
++riscv_insn_ext_xnn = \
++	xnnmul \
++
+ riscv_insn_ext_a = \
+ 	amoadd_d \
+ 	amoadd_w \
+@@ -1435,6 +1438,7 @@ riscv_insn_list = \
+ 	$(riscv_insn_svinval) \
+ 	$(riscv_insn_ext_zimop) \
+ 	$(riscv_insn_ext_zicfilp) \
++	$(riscv_insn_ext_xnn) \
+ 
+ riscv_gen_srcs = $(addsuffix .cc,$(riscv_insn_list))
+ 
+diff --git a/softfloat/f32_mulAdd.c b/softfloat/f32_mulAdd.c
+index e98021b7..23fb8a36 100644
+--- a/softfloat/f32_mulAdd.c
++++ b/softfloat/f32_mulAdd.c
+@@ -39,6 +39,60 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "internals.h"
+ #include "softfloat.h"
+ 
++int16_t getExponent(float32_t num) {
++    union {
++        float32_t f;
++        int32_t i;
++    } converter;
++
++    converter.f = num;
++
++    // Extracting the exponent bits from the floating-point representation
++    int16_t exponent = (converter.i >> 23) & 0xFF;
++    // Biasing the exponent to get the actual value
++    exponent -= 127;
++
++    return exponent;
++}
++
++float32_t pack_exp(float32_t num, int16_t exp) {
++    union {
++        float32_t f;
++        int32_t i;
++    } converter;
++
++    converter.f = num;
++
++    // Clearing existing exponent bits
++    converter.i &= ~(0xFF << 23);
++
++    // Setting new exponent bits
++    converter.i |= ((exp + 127) << 23);
++
++    return converter.f;
++}
++
++float32_t exp_add(float32_t input1, float32_t input2) {
++    int16_t exp1 = getExponent(input1);
++    int16_t exp2 = getExponent(input2);
++
++    if (exp1 > exp2)
++        return input1;
++    else
++        return input2;
++}
++
++float32_t exp_mul(float32_t input1, float32_t input2) {
++    int16_t exp1 = getExponent(input1);
++    int16_t exp2 = getExponent(input2);
++    int16_t res_exp = exp1 + exp2;
++    return pack_exp(input1, res_exp);
++}
++
++float32_t f32_nn_mul(float32_t a, float32_t b){
++   return exp_mul(a,b);
++}
++
+ float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
+ {
+     union ui32_f32 uA;
+diff --git a/softfloat/softfloat.h b/softfloat/softfloat.h
+index eb78d74d..34bce096 100644
+--- a/softfloat/softfloat.h
++++ b/softfloat/softfloat.h
+@@ -225,6 +225,9 @@ bool f32_isSignalingNaN( float32_t );
+ uint_fast16_t f32_classify( float32_t );
+ float32_t f32_rsqrte7( float32_t );
+ float32_t f32_recip7( float32_t );
++// 32 bit NN approx operations
++float32_t f32_nn_mul(float32_t a, float32_t b);
++
+ 
+ /*----------------------------------------------------------------------------
+ | 64-bit (double-precision) floating-point operations.
