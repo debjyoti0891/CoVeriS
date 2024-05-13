@@ -1,10 +1,10 @@
 # CoVeriS: : RISC-V Codesign TutorialS
 
 This repository has the code for the accompanying tutorial series.
-- [HW-SW co-design in the RISC-V Ecosystem [Part 1]](https://debjyoti0891.github.io/compilation/mlir/riscv/2024/03/23/llvm_mlir_1.html)
-- [HW-SW co-design in the RISC-V Ecosystem [Part 2]: MLIR to LLVM](https://debjyoti0891.github.io/compilation/mlir/llvm/riscv/2024/04/09/llvm_mlir_02.html)
-- HW-SW co-design in the RISC-V Ecosystem: Adding custom instructions to LLVM [Part 3] : Coming soon!
-- HW-SW co-design in the RISC-V Ecosystem: Adding custom instructions to Spike [Part 4] : Coming soon!
+- [HW-SW co-design in the RISC-V Ecosystem [Part 1]](https://debjyoti0891.github.io/mlir/part1)
+- [HW-SW co-design in the RISC-V Ecosystem [Part 2]: MLIR to LLVM](https://debjyoti0891.github.io/mlir/part2)
+- [HW-SW co-design in the RISC-V Ecosystem: Adding custom instructions to LLVM [Part 3]](https://debjyoti0891.github.io/mlir/part3)
+- [HW-SW co-design in the RISC-V Ecosystem: Adding custom instructions to Spike [Part 4]](https://debjyoti0891.github.io/mlir/part4)
 
 
 ## External Dependencies
